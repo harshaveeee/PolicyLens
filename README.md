@@ -17,7 +17,8 @@ streamlit run app.py
 
 ## Current data status
 
-- `data/policies.json` contains illustrative demonstration records. These are not current insurer offers, sourced policy clauses or premium quotations.
+- `data/market_reference.json` contains Policybazaar product listings, insurer figures and investment-plan values transcribed from the user-provided numerical extraction document. It records the source URL, access date, reporting context and limitations. The dynamic source has not been independently verified.
+- `data/policies.json` contains illustrative demonstration records for the clause-explanation and claim-readiness workflows. These are not current insurer offers, sourced policy clauses or premium quotations.
 - `data/branches.json` is empty until verified insurer branch/adviser records are provided.
 - `data/occupations.json` contains a descriptive occupation/exposure taxonomy. It is not an underwriting, medical, actuarial or pricing model.
 - Applicant health details are optional, require explicit on-screen consent, are not sent to an AI service, and are not used to reject or score a policy.
