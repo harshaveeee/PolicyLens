@@ -1,0 +1,178 @@
+[
+  {
+    "name": "Illustrative Endowment Plan",
+    "category": "Non-term life",
+    "product_type": "Endowment life insurance",
+    "insurer": "Demonstration record",
+    "source": "Illustrative sample, not insurer wording",
+    "source_url": null,
+    "version": "Demo v1",
+    "uin": "Not applicable — demonstration data",
+    "effective_date": "Demonstration only",
+    "premium": 42000,
+    "premium_term_years": 20,
+    "policy_term_years": 20,
+    "minimum_entry_age": 18,
+    "maximum_entry_age": 55,
+    "maturity": "Illustrative lump-sum maturity benefit",
+    "death_benefit": "Illustrative benefit subject to policy terms",
+    "surrender": "Terms and value require insurer confirmation",
+    "clauses": [
+      {
+        "category": "Premium payment",
+        "page": 5,
+        "text": "Illustrative wording: Premiums are payable at the frequency and for the period shown in the policy schedule.",
+        "explanation": "Premiums are due on the schedule and for the payment period selected. Check the official schedule for amounts, dates, and what happens after a missed payment.",
+        "extraction_confidence": null
+      },
+      {
+        "category": "Maturity benefit",
+        "page": 12,
+        "text": "Illustrative wording: The maturity benefit is payable on survival of the life assured to the end of the policy term, subject to policy conditions.",
+        "explanation": "A maturity payout may be due if the insured person survives to the policy end date and the contract conditions are met. Confirm the guaranteed amount and any non-guaranteed additions.",
+        "extraction_confidence": null
+      },
+      {
+        "category": "Surrender",
+        "page": 17,
+        "text": "Illustrative wording: Surrender value, if any, is determined under the applicable policy schedule and conditions.",
+        "explanation": "Ending the policy early may return less than the premiums paid, or no amount during some periods. Ask the insurer for a current surrender-value illustration.",
+        "extraction_confidence": null
+      }
+    ],
+    "sum_assured": "₹10 lakh illustrative sum assured",
+    "sum_assured_lakh": 10
+  },
+  {
+    "name": "Illustrative Participating Whole-Life Plan",
+    "category": "Non-term life",
+    "product_type": "Whole-life participating life insurance",
+    "insurer": "Demonstration record",
+    "source": "Illustrative sample, not insurer wording",
+    "source_url": null,
+    "version": "Demo v1",
+    "uin": "Not applicable — demonstration data",
+    "effective_date": "Demonstration only",
+    "premium": 36000,
+    "premium_term_years": 15,
+    "policy_term_years": 99,
+    "minimum_entry_age": 18,
+    "maximum_entry_age": 50,
+    "maturity": "Illustrative long-duration benefit; terms require confirmation",
+    "death_benefit": "Illustrative benefit subject to policy terms",
+    "surrender": "Terms and value require insurer confirmation",
+    "clauses": [
+      {
+        "category": "Bonuses",
+        "page": 10,
+        "text": "Illustrative wording: Any bonus is subject to declaration by the insurer and the terms applicable to the policy.",
+        "explanation": "A participating policy may receive additions only when declared under its rules. Treat projected additions as non-guaranteed unless the official contract says otherwise.",
+        "extraction_confidence": null
+      },
+      {
+        "category": "Death benefit",
+        "page": 14,
+        "text": "Illustrative wording: The death benefit is payable to the nominee or beneficiary subject to policy conditions and proof requirements.",
+        "explanation": "A benefit may be payable to the recorded nominee after the insurer receives required documents and verifies the claim. Check exclusions, nomination details, and proof requirements.",
+        "extraction_confidence": null
+      },
+      {
+        "category": "Surrender",
+        "page": 19,
+        "text": "Illustrative wording: Surrender benefits, where applicable, are calculated under the policy schedule and contract conditions.",
+        "explanation": "Cash value on early exit depends on the contract and timing. Request an insurer-issued value before making a decision.",
+        "extraction_confidence": null
+      }
+    ],
+    "sum_assured": "₹15 lakh illustrative sum assured",
+    "sum_assured_lakh": 15
+  },
+  {
+    "name": "Illustrative Money-Back Life Plan",
+    "category": "Non-term life",
+    "product_type": "Money-back life insurance",
+    "insurer": "Demonstration record",
+    "source": "Illustrative sample, not insurer wording",
+    "source_url": null,
+    "version": "Demo v1",
+    "uin": "Not applicable — demonstration data",
+    "effective_date": "Demonstration only",
+    "premium": 48000,
+    "premium_term_years": 20,
+    "policy_term_years": 20,
+    "minimum_entry_age": 18,
+    "maximum_entry_age": 55,
+    "maturity": "Illustrative scheduled payouts and maturity benefit",
+    "death_benefit": "Illustrative benefit subject to policy terms",
+    "surrender": "Terms and value require insurer confirmation",
+    "clauses": [
+      {
+        "category": "Scheduled payouts",
+        "page": 9,
+        "text": "Illustrative wording: Survival benefits, if applicable, are payable at the milestones and in the amounts stated in the policy schedule.",
+        "explanation": "Some plans pay portions of the benefit at set dates if policy conditions are met. Check each date and amount in the official schedule.",
+        "extraction_confidence": null
+      },
+      {
+        "category": "Missed premium",
+        "page": 13,
+        "text": "Illustrative wording: A policy may enter a grace period or lapse as provided in the applicable terms.",
+        "explanation": "If a premium is missed, a limited payment window or other policy options may apply. Check the grace period and effect on benefits with the insurer.",
+        "extraction_confidence": null
+      },
+      {
+        "category": "Claims process",
+        "page": 21,
+        "text": "Illustrative wording: The claimant shall submit the forms and supporting documents specified by the insurer for assessment.",
+        "explanation": "The claimant must provide the insurer’s required forms and supporting records. Get the current checklist directly from the insurer before submitting.",
+        "extraction_confidence": null
+      }
+    ],
+    "sum_assured": "₹8 lakh illustrative sum assured",
+    "sum_assured_lakh": 8
+  },
+  {
+    "name": "Illustrative Term Life Plan",
+    "category": "Term life",
+    "product_type": "Term life insurance",
+    "insurer": "Demonstration record",
+    "source": "Illustrative sample, not insurer wording",
+    "source_url": null,
+    "version": "Demo v1",
+    "uin": "Not applicable — demonstration data",
+    "effective_date": "Demonstration only",
+    "premium": 12000,
+    "premium_term_years": 25,
+    "policy_term_years": 25,
+    "minimum_entry_age": 18,
+    "maximum_entry_age": 60,
+    "maturity": "No maturity benefit in this illustrative example",
+    "death_benefit": "Illustrative benefit subject to policy terms",
+    "surrender": "No surrender value in this illustrative example",
+    "clauses": [
+      {
+        "category": "Death benefit",
+        "page": 7,
+        "text": "Illustrative wording: The sum assured is payable on death of the life assured during the policy term, subject to policy conditions.",
+        "explanation": "A benefit may be payable if the insured person dies while cover is active and contract conditions are met. Confirm exclusions, claim proof and nominee details in the official policy.",
+        "extraction_confidence": null
+      },
+      {
+        "category": "Premium payment",
+        "page": 11,
+        "text": "Illustrative wording: Premiums must be paid as stated in the policy schedule to maintain cover, subject to the grace period and lapse provisions.",
+        "explanation": "Cover may be affected if premiums are not paid within the allowed period. Check the grace period, revival rules and consequences of lapse.",
+        "extraction_confidence": null
+      },
+      {
+        "category": "Exclusions",
+        "page": 18,
+        "text": "Illustrative wording: Benefits may be restricted in circumstances set out in the exclusions and applicable regulations.",
+        "explanation": "Some circumstances may limit or affect a benefit. Review the full exclusions and current insurer terms before relying on the cover.",
+        "extraction_confidence": null
+      }
+    ],
+    "sum_assured": "₹50 lakh illustrative sum assured",
+    "sum_assured_lakh": 50
+  }
+]
