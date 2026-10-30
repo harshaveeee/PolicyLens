@@ -1,0 +1,72 @@
+{
+  "source_title": "Policybazaar Life Insurance page",
+  "source_url": "https://www.policybazaar.com/life-insurance/",
+  "accessed_date": "2026-10-31",
+  "source_note": "Values transcribed from the user-provided numerical extraction document. The source page is dynamic and the figures have not been independently verified.",
+  "limitations": [
+    "Insurer figures mix reporting periods and source contexts. Differences shown in the source are retained.",
+    "The term-plan list provides sum-assured ranges only. It does not provide comparable premiums, entry ages, or full policy wording.",
+    "The investment-plan table does not provide enough methodology to treat its displayed returns as guaranteed or comparable forward returns.",
+    "These reference figures support exploration only. They are not personalized quotes, policy eligibility checks, or a basis for automatic ranking."
+  ],
+  "market_facts": {
+    "insurers_in_comparison": 5,
+    "term_products_listed": 23,
+    "investment_plans_listed": 14,
+    "advertised_term_cover": "₹1 crore",
+    "advertised_monthly_premium": "₹478",
+    "advertised_premium_qualification": "The source footnote describes a salaried person with annual income of ₹10 lakh and graduate-or-above education. This is an illustration, not a quote."
+  },
+  "insurer_comparison": {
+    "period_label": "FY 2024–25 comparison table, with claim-ratio and paragraph contexts retained as displayed",
+    "premium_unit": "₹ crore",
+    "records": [
+      {"insurer": "LIC", "annualized_premium_crore": 488848.92, "claim_settlement_ratio": "Industry-leading historic base (no percentage shown)", "solvency_ratio_table": "1.87", "solvency_ratio_text": null, "context": "Oldest, largest, widest rural reach"},
+      {"insurer": "SBI Life", "annualized_premium_crore": 84984.63, "claim_settlement_ratio": "98.56% (FY26)", "solvency_ratio_table": "2.2", "solvency_ratio_text": "2.01", "context": "Bancassurance reach via SBI network"},
+      {"insurer": "HDFC Life", "annualized_premium_crore": 71044.91, "claim_settlement_ratio": "99.72%", "solvency_ratio_table": "2", "solvency_ratio_text": "1.87", "context": "Superbrand 2026 (10th time), strong digital app"},
+      {"insurer": "ICICI Life", "annualized_premium_crore": 48950.71, "claim_settlement_ratio": "99.3%", "solvency_ratio_table": "2.06", "solvency_ratio_text": null, "context": "₹46,182 crore claims paid; 9.17 crore lives covered"},
+      {"insurer": "Axis Max Life", "annualized_premium_crore": 33222.60, "claim_settlement_ratio": "99.8% death-claim ratio (FY26)", "solvency_ratio_table": "1.95", "solvency_ratio_text": null, "context": "405 branches; ₹21,91,857 crore total sum assured"}
+    ]
+  },
+  "term_products": [
+    {"insurer":"HDFC Life","product":"HDFC Life Click 2 Supreme","sum_assured_range":"₹10,000 – No Limit (above 65 years: ₹50,000)"},
+    {"insurer":"ICICI Life","product":"ICICI Pru iProtect Smart Plus Term Plan","sum_assured_range":"₹50 lakh – ₹20 crore"},
+    {"insurer":"Tata AIA","product":"Tata AIA Sampoorna Raksha Promise","sum_assured_range":"₹25 lakh – No limit"},
+    {"insurer":"SBI Life","product":"SBI Life Smart Shield Plus","sum_assured_range":"₹50 lakh – No limit"},
+    {"insurer":"Bajaj Life","product":"Bajaj Life eTouch II","sum_assured_range":"₹50 lakh – No limit"},
+    {"insurer":"Axis Max Life","product":"Axis Max Smart Term Plan Plus","sum_assured_range":"₹25 lakh – ₹20 crore"},
+    {"insurer":"Digit Life","product":"Digit Glow Plus","sum_assured_range":"₹25 lakh – ₹20 crore"},
+    {"insurer":"Aditya Birla Sun Life","product":"ABSLI DigiShield","sum_assured_range":"₹30 lakh – No limit"},
+    {"insurer":"IndiaFirst Life","product":"IndiaFirst Life Plan","sum_assured_range":"₹1 lakh – ₹50 crore"},
+    {"insurer":"Kotak Mahindra Life","product":"Kotak e-Term Insurance","sum_assured_range":"₹51 lakh – No limit"},
+    {"insurer":"Canara HSBC Life","product":"Canara HSBC Young Term Plan – Life Secure","sum_assured_range":"₹25 lakh – No limit"},
+    {"insurer":"Shriram Life","product":"Shriram Life Online Term Plan","sum_assured_range":"₹25 lakh – ₹10 crore"},
+    {"insurer":"PNB MetLife","product":"PNB Mera Term Plan Plus","sum_assured_range":"₹25 lakh – No limit"},
+    {"insurer":"Star Union Dai-ichi","product":"SUD Life e-Lifeline","sum_assured_range":"₹25 lakh – ₹1 crore"},
+    {"insurer":"DHFL Pramerica","product":"Pramerica Life Saral Jeevan Bima","sum_assured_range":"₹5 lakh – ₹25 lakh"},
+    {"insurer":"Aviva Life","product":"Signature 3D Term Plan – Platinum","sum_assured_range":"₹30 lakh – ₹5 crore"},
+    {"insurer":"Future Generali","product":"Future Generali Care Plus Plan","sum_assured_range":"₹10 lakh – No limit"},
+    {"insurer":"Reliance Nippon Life","product":"Reliance Nippon Life Super Suraksha Plus","sum_assured_range":"₹2 crore – No limit"},
+    {"insurer":"Ageas Federal Life","product":"Termsurance Life Protection Insurance Plan","sum_assured_range":"₹5 lakh – No limit"},
+    {"insurer":"Bandhan Life","product":"Bandhan Life iTerm Prime","sum_assured_range":"Not shown in source"},
+    {"insurer":"Bharti AXA Life","product":"Bharti AXA Flexi Term Pro","sum_assured_range":"₹25 lakh – No limit"},
+    {"insurer":"Edelweiss Tokio Life","product":"Zindagi Protect Plus","sum_assured_range":"₹50 lakh – No limit"},
+    {"insurer":"LIC","product":"LIC Jeevan Amar","sum_assured_range":"₹25 lakh – No limit"}
+  ],
+  "investment_plans": [
+    {"insurer":"SBI Life","product":"SBI Life-eWealth Plus","five_year_return":"15.7%","ten_year_return":"12.3%"},
+    {"insurer":"HDFC Life","product":"Click2Invest","five_year_return":"28.1%","ten_year_return":"21%"},
+    {"insurer":"Axis Max Life","product":"Online Savings Plan","five_year_return":"28.6%","ten_year_return":"17.8%"},
+    {"insurer":"ICICI Life","product":"EzyGrow – Wealth","five_year_return":"25.1%","ten_year_return":"17.7%"},
+    {"insurer":"Tata AIA","product":"Smart Fortune Plus – Wealth Secure","five_year_return":"27.3%","ten_year_return":"17.9%"},
+    {"insurer":"Bajaj Life","product":"Smart Wealth Goal V","five_year_return":"27.5%","ten_year_return":"18.8%"},
+    {"insurer":"Birla Sun Life","product":"Wealth Smart Plus","five_year_return":"22%","ten_year_return":"15.4%"},
+    {"insurer":"Kotak Mahindra Life","product":"E-Invest Plus","five_year_return":"20.7%","ten_year_return":"14.2%"},
+    {"insurer":"PNB MetLife","product":"Smart Goal Ensuring Multiplier – Wealth","five_year_return":"20.3%","ten_year_return":"15%"},
+    {"insurer":"Canara HSBC Life","product":"Promise4Growth Plus – Wealth","five_year_return":"15.6%","ten_year_return":"10.9%"},
+    {"insurer":"Star Union Dai-ichi","product":"e-Wealth Royale","five_year_return":"14.2%","ten_year_return":"10.2%"},
+    {"insurer":"Pramerica Life","product":"Smart Invest 1 UP","five_year_return":"27.4%","ten_year_return":"17.9%"},
+    {"insurer":"Bandhan Life","product":"iInvest Advantage Plan","five_year_return":"20.1%","ten_year_return":"13.8%"},
+    {"insurer":"LIC","product":"LIC India Index Plus","five_year_return":"13.3%","ten_year_return":"14.9%"}
+  ]
+}
