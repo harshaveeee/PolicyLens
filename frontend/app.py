@@ -3,7 +3,7 @@
 import streamlit as st
 import pydeck as pdk
 
-from backend.repository import get_branches, get_occupations, get_policies
+from backend.repository import get_branches, get_market_reference, get_occupations, get_policies
 from backend.services.claim_readiness import DOCUMENTS_BY_EVENT, assess_scenario
 from backend.services.documents import classify_page_text, extract_pdf_pages, make_review_note
 from backend.services.geography import find_locations, nearby_locations, location_centroid
@@ -98,11 +98,41 @@ def _policy_upload():
                 st.error("This PDF could not be read. Try a text-based policy PDF.")
 
 
-def _comparison(policies, branches, occupations, pin):
+def _market_reference(reference, product_focus):
+    st.markdown("### Market reference data")
+    st.caption(f"Source: [{reference['source_title']}]({reference['source_url']}) · Accessed {reference['accessed_date']}")
+    facts = reference["market_facts"]
+    st.write(f"The source lists {facts['insurers_in_comparison']} insurer snapshots, {facts['term_products_listed']} term products and {facts['investment_plans_listed']} investment plans.")
+    st.caption(f"The page advertises {facts['advertised_term_cover']} cover at {facts['advertised_monthly_premium']}/month. {facts['advertised_premium_qualification']}")
+    with st.expander("Insurer snapshot", expanded=True):
+        st.caption(reference["insurer_comparison"]["period_label"] + f" · Premium unit: {reference['insurer_comparison']['premium_unit']}")
+        for record in reference["insurer_comparison"]["records"]:
+            solvency = record["solvency_ratio_table"]
+            if record.get("solvency_ratio_text"):
+                solvency += f" (insurer paragraph: {record['solvency_ratio_text']})"
+            st.markdown(f"**{record['insurer']}** · Annualized premium ₹{record['annualized_premium_crore']:,.2f} crore · Claim ratio: {record['claim_settlement_ratio']} · Solvency: {solvency}")
+            st.caption(record["context"])
+    if product_focus in ("All life policies", "Term life"):
+        with st.expander("Term products and sum-assured ranges"):
+            for record in reference["term_products"]:
+                st.markdown(f"- **{record['product']}** · {record['insurer']} · {record['sum_assured_range']}")
+    if product_focus in ("All life policies", "Non-term life"):
+        with st.expander("Investment-plan figures shown by the source"):
+            st.caption("The source provides displayed 5-year and 10-year return figures, but not enough methodology to assess comparability or treat them as guaranteed or forward returns.")
+            for record in reference["investment_plans"]:
+                st.markdown(f"- **{record['product']}** · {record['insurer']} · 5-year: {record['five_year_return']} · 10-year: {record['ten_year_return']}")
+    for limitation in reference["limitations"]:
+        st.caption(f"• {limitation}")
+
+
+def _comparison(policies, branches, occupations, pin, market_reference, product_focus):
     st.markdown('<div class="eyebrow">Life policy explorer</div>', unsafe_allow_html=True)
     policy_category = policies[0]["category"] if policies and len({item["category"] for item in policies}) == 1 else "life"
     st.title(f"Compare {policy_category.lower()} policies" if policy_category != "life" else "Compare life policies")
-    st.write("Review policy benefits, payment commitments and conditions side by side. Choose term life or non-term life in the sidebar.")
+    st.write("Review source-listed products and insurer figures, then compare policy details where wording is available. Choose term life or non-term life in the sidebar.")
+    _market_reference(market_reference, product_focus)
+    st.markdown("### Policy clause examples")
+    st.caption("The clause workflows below remain illustrative until official policy wording is added.")
     _policy_upload()
 
     names = [item["name"] for item in policies]
@@ -283,6 +313,7 @@ def main():
     st.set_page_config(page_title="PolicyLens", page_icon="◈", layout="wide", initial_sidebar_state="expanded")
     _styles()
     policies, branches, occupations = get_policies(), get_branches(), get_occupations()
+    market_reference = get_market_reference()
     with st.sidebar:
         st.markdown('<p class="brand">Policy<span>Lens</span></p>', unsafe_allow_html=True)
         st.caption("Life insurance, made clearer")
@@ -314,9 +345,11 @@ def main():
                 st.markdown(f'<div class="panel"><span class="eyebrow">{eyebrow}</span><h3>{title}</h3><p class="subtle">{body}</p></div>', unsafe_allow_html=True)
         st.markdown("### Evidence and context")
         st.info("Policy facts and explanations are kept distinct. Open the source wording when you need to check context.")
-        st.caption("The bundled products and clauses are illustrative. Health, motor and other non-life insurance are outside the current project scope.")
+        st.markdown("### Published market reference")
+        st.write(f"The comparison includes sourced listings for {market_reference['market_facts']['term_products_listed']} term products and {market_reference['market_facts']['investment_plans_listed']} investment plans from Policybazaar.")
+        st.caption("These reference listings do not include full policy wordings or comparable premiums. Clause examples remain illustrative. Confirm current details with each insurer.")
     elif page == "Policy comparison":
-        _comparison(visible_policies, branches, occupations, pin)
+        _comparison(visible_policies, branches, occupations, pin, market_reference, product_focus)
     elif page == "Claim readiness":
         _claim_readiness(visible_policies)
     else:
