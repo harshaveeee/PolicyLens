@@ -21,3 +21,7 @@ def get_branches():
 
 def get_occupations():
     return _read_json("occupations.json")
+
+
+def get_market_reference():
+    return _read_json("market_reference.json")
