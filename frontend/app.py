@@ -2,9 +2,9 @@
 
 import streamlit as st
 import pydeck as pdk
-import pandas as pd
 import os
 import hashlib
+from html import escape
 
 from backend.repository import get_branches, get_market_reference, get_occupations, get_policies
 from backend.services.claim_readiness import DOCUMENTS_BY_EVENT, assess_scenario
@@ -96,8 +96,42 @@ def _styles():
     [data-testid="stProgressBar"]>div>div {background:linear-gradient(90deg,#44d8c8,#8182fa)!important;}
     [data-testid="stFileUploader"] section {background:rgba(13,27,43,.48);border:1px dashed rgba(142,191,212,.32);border-radius:14px;}
     [data-testid="stFileUploader"] button {color:#dff7f2!important;}
+    .viz-card {background:linear-gradient(145deg,rgba(21,39,58,.78),rgba(12,25,41,.72));border:1px solid rgba(190,219,238,.14);border-radius:16px;padding:1rem 1.1rem 1.05rem;box-shadow:0 12px 34px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.045);backdrop-filter:blur(14px);height:100%;}
+    .viz-heading {display:flex;align-items:center;gap:.55rem;color:#f0f7fc;font-weight:700;font-size:.98rem;margin:0 0 .2rem;}
+    .viz-dot {width:.52rem;height:.52rem;border-radius:50%;background:linear-gradient(135deg,#56e0d0,#8876f4);box-shadow:0 0 12px rgba(86,224,208,.55);flex:0 0 auto;}
+    .viz-subtitle {color:#9fb4c4;font-size:.77rem;line-height:1.45;margin:0 0 .9rem;}
+    .viz-row {margin:.72rem 0 .85rem;}
+    .viz-meta {display:flex;justify-content:space-between;align-items:baseline;gap:.8rem;margin-bottom:.34rem;}
+    .viz-label {color:#dbe7ef;font-size:.82rem;overflow-wrap:anywhere;}
+    .viz-value {color:#f4fbff;font-size:.82rem;font-weight:700;white-space:nowrap;}
+    .viz-track {height:.58rem;background:rgba(164,194,216,.12);border-radius:999px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.22);}
+    .viz-fill {height:100%;min-width:0;border-radius:999px;background:linear-gradient(90deg,#3dd6c5 0%,#3fb4dc 55%,#8876f4 100%);box-shadow:0 0 16px rgba(70,203,210,.25);}
+    .viz-foot {border-top:1px solid rgba(190,219,238,.1);padding-top:.58rem;margin-top:.72rem;color:#8fa8ba;font-size:.72rem;}
     </style>
     """, unsafe_allow_html=True)
+
+
+def _bar_panel(title, subtitle, items, max_value, footer=None):
+    """Render a small PolicyLens-styled horizontal bar panel (items are label/value/display triples)."""
+    rows = []
+    for label, value, display_value in items:
+        numeric = max(float(value), 0.0)
+        percent = min(max(numeric / max(float(max_value), 1e-9) * 100, 0), 100)
+        rows.append(
+            '<div class="viz-row">'
+            f'<div class="viz-meta"><span class="viz-label">{escape(str(label))}</span><strong class="viz-value">{escape(str(display_value))}</strong></div>'
+            f'<div class="viz-track" role="meter" aria-label="{escape(str(label), quote=True)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{percent:.0f}">'
+            f'<div class="viz-fill" style="width:{percent:.1f}%"></div></div></div>'
+        )
+    chart = (
+        '<section class="viz-card">'
+        f'<div class="viz-heading"><span class="viz-dot"></span>{escape(str(title))}</div>'
+        f'<div class="viz-subtitle">{escape(str(subtitle))}</div>'
+        + ("".join(rows) if rows else '<div class="viz-foot">No values to display.</div>')
+        + (f'<div class="viz-foot">{escape(str(footer))}</div>' if footer else "")
+        + '</section>'
+    )
+    st.markdown(chart, unsafe_allow_html=True)
 
 
 def _render_clause(policy, clause):
@@ -199,11 +233,19 @@ def _comparison(policies, market_reference, product_focus):
     if selected:
         chart_col, premium_col = st.columns(2)
         with chart_col:
-            st.markdown("**Illustrative sum assured**")
-            st.bar_chart(pd.DataFrame({"₹ lakh": {item["name"]: item["sum_assured_lakh"] for item in selected}}), horizontal=True)
+            _bar_panel(
+                "Illustrative sum assured",
+                "Cover amount for each selected example; bars scale to the largest shown.",
+                [(item["name"], item["sum_assured_lakh"], f"₹{item['sum_assured_lakh']:g} lakh") for item in selected],
+                max(item["sum_assured_lakh"] for item in selected),
+            )
         with premium_col:
-            st.markdown("**Illustrative annual premium**")
-            st.bar_chart(pd.DataFrame({"₹ / year": {item["name"]: item["premium"] for item in selected}}), horizontal=True)
+            _bar_panel(
+                "Illustrative annual premium",
+                "Example yearly amount; bars scale to the highest shown.",
+                [(item["name"], item["premium"], f"₹{item['premium']:,}/year") for item in selected],
+                max(item["premium"] for item in selected),
+            )
         st.caption("Charts compare bundled examples, not insurer quotes or current offers.")
         labels = [("Product", "product_type"), ("Insurer", "insurer"), ("Product UIN", "uin"),
                   ("Version / effective date", "version_date"), ("Official source URL", "source_url"),
@@ -347,9 +389,12 @@ def _recommendations(policies, branches, occupations, pin):
         st.warning("No example passed all three limits. Try adjusting age, minimum cover, or annual budget.")
     else:
         st.markdown("### Your ranked examples")
-        st.caption("The bars compare only the examples that passed your must-haves. Fit is not a probability, policy-quality rating, or insurer approval estimate.")
-        fit = pd.DataFrame({"Preference fit / 100": {policy["name"]: policy["preference_fit"] for policy in ranked}})
-        st.bar_chart(fit, horizontal=True, height=min(320, 90 + 42 * len(ranked)))
+        _bar_panel(
+            "Preference fit",
+            "Relative 0–100 score for examples that passed your must-haves. Not a probability, quality rating, or insurer approval estimate.",
+            [(policy["name"], policy["preference_fit"], f"{policy['preference_fit']} / 100") for policy in ranked],
+            100,
+        )
         best = ranked[0]
         with st.container(border=True):
             st.markdown(f"#### Best preference match · {best['name']}")
@@ -360,10 +405,14 @@ def _recommendations(policies, branches, occupations, pin):
             middle.metric("Preference fit", f"{best['preference_fit']}/100")
             middle.progress(best["preference_fit"])
             factor_labels = {"coverage_score": "Life cover", "price_score": "Lower price", "benefit_score": "Goal match", "local_support_score": "Local support"}
-            contributions = {factor_labels.get(key, key): value * weights[key] for key, value in best["score_breakdown"].items()}
-            right.markdown("**Weighted factor points**")
-            right.caption("Each bar = factor score × slider weight. The total fit divides their sum by the total weight.")
-            right.bar_chart(pd.DataFrame({"Weighted points": contributions}), horizontal=True, height=210)
+            total_weight = sum(weights.values()) or 1
+            contributions = {factor_labels.get(key, key): round(value * weights[key] / total_weight, 1) for key, value in best["score_breakdown"].items()}
+            _bar_panel(
+                "Contribution to fit",
+                "Points each factor adds to the final 0–100 score after its slider weight is applied.",
+                [(label, points, f"{points:.1f} pts") for label, points in contributions.items()],
+                100,
+            )
         if len(ranked) > 1:
             with st.expander("See other matching examples"):
                 for position, policy in enumerate(ranked[1:], start=2):
@@ -500,7 +549,13 @@ def main():
                 st.markdown(f'<div class="panel"><h3>{title}</h3><p class="subtle">{body}</p></div>', unsafe_allow_html=True)
         st.markdown("### Reference snapshot")
         counts = market_reference["market_facts"]
-        st.bar_chart(pd.DataFrame({"Listings": {"Term products": counts["term_products_listed"], "Investment plans": counts["investment_plans_listed"]}}), horizontal=True)
+        _bar_panel(
+            "Listings in the source reference",
+            "Counts transcribed from the user-provided Policybazaar data reference.",
+            [("Term products", counts["term_products_listed"], f"{counts['term_products_listed']} products"),
+             ("Investment plans", counts["investment_plans_listed"], f"{counts['investment_plans_listed']} plans")],
+            max(counts["term_products_listed"], counts["investment_plans_listed"]),
+        )
         st.caption(f"Policybazaar reference: {counts['term_products_listed']} term listings and {counts['investment_plans_listed']} investment-plan listings. These are market listings, not comparable policy quotes.")
         st.caption("Bundled policy and clause examples are illustrative. Uploaded wording is shown separately from its review summary.")
     elif page == "Policy comparison":
