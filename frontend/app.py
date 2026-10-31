@@ -2,10 +2,13 @@
 
 import streamlit as st
 import pydeck as pdk
+import pandas as pd
+import os
+import hashlib
 
 from backend.repository import get_branches, get_market_reference, get_occupations, get_policies
 from backend.services.claim_readiness import DOCUMENTS_BY_EVENT, assess_scenario
-from backend.services.documents import classify_page_text, extract_pdf_pages, make_review_note
+from backend.services.documents import classify_page_text, extract_pdf_pages, make_review_note, summarize_policy_text
 from backend.services.geography import find_locations, nearby_locations, location_centroid
 from backend.services.occupations import get_profile
 from backend.services.recommendations import rank_policies
@@ -84,14 +87,35 @@ def _policy_upload():
                 else:
                     page = st.selectbox("Extracted page", selectable, format_func=lambda item: f"Page {item['page']}")
                     category = classify_page_text(page["text"])
-                    left, right = st.columns(2)
-                    with left:
-                        st.markdown(f"**Extracted wording · {category}**")
-                        st.text_area("Policy text", page["text"], height=230, label_visibility="collapsed")
-                    with right:
-                        st.markdown("**Review prompt**")
-                        st.info(make_review_note(category))
-                        st.caption("Uploaded documents are extracted for review; this build does not create AI interpretations of new PDFs.")
+                    facts_tab, summary_tab = st.tabs(["Extracted facts", "AI summary"])
+                    with facts_tab:
+                        st.caption(f"Source text · {category} · Page {page['page']}")
+                        st.text_area("Extracted source wording", page["text"], height=240, label_visibility="collapsed")
+                        st.caption("This panel contains text extracted from the uploaded page. Verify it against the original PDF.")
+                    with summary_tab:
+                        st.markdown("**AI plain-language summary**")
+                        api_key = os.environ.get("OPENAI_API_KEY", "")
+                        model = os.environ.get("OPENAI_MODEL", "")
+                        try:
+                            api_key = api_key or st.secrets.get("OPENAI_API_KEY", "")
+                            model = model or st.secrets.get("OPENAI_MODEL", "")
+                        except Exception:
+                            pass
+                        configured = bool(api_key and model)
+                        if not configured:
+                            st.info("AI summaries are unavailable until OPENAI_API_KEY and OPENAI_MODEL are configured in the app secrets.")
+                        st.caption("When you request a summary, only the selected page’s extracted text is sent to OpenAI. It is not stored as policy evidence and may omit details; verify every point in the original wording.")
+                        consent = st.checkbox("I consent to sending this page’s extracted text to OpenAI for a summary.", key="ai_summary_consent")
+                        summary_key = "uploaded_summary_" + hashlib.sha256(f"{uploaded.name}:{page['page']}:{page['text']}".encode("utf-8")).hexdigest()
+                        if st.button("Generate AI summary", type="primary", disabled=not (configured and consent), key="generate_policy_summary"):
+                            with st.spinner("Summarizing the selected page…"):
+                                try:
+                                    st.session_state[summary_key] = summarize_policy_text(page["text"], api_key, model)
+                                except RuntimeError as error:
+                                    st.error(str(error))
+                        if summary_key in st.session_state:
+                            st.write(st.session_state[summary_key])
+                        st.caption(make_review_note(category))
             except RuntimeError as error:
                 st.error(str(error))
             except Exception:
@@ -125,20 +149,25 @@ def _market_reference(reference, product_focus):
         st.caption(f"• {limitation}")
 
 
-def _comparison(policies, branches, occupations, pin, market_reference, product_focus):
+def _comparison(policies, market_reference, product_focus):
     st.markdown('<div class="eyebrow">Life policy explorer</div>', unsafe_allow_html=True)
     policy_category = policies[0]["category"] if policies and len({item["category"] for item in policies}) == 1 else "life"
     st.title(f"Compare {policy_category.lower()} policies" if policy_category != "life" else "Compare life policies")
-    st.write("Review source-listed products and insurer figures, then compare policy details where wording is available. Choose term life or non-term life in the sidebar.")
+    st.caption("Choose products to compare. Demonstration policy values are illustrative; source-listed market figures are shown separately.")
     _market_reference(market_reference, product_focus)
-    st.markdown("### Policy clause examples")
-    st.caption("The clause workflows below remain illustrative until official policy wording is added.")
-    _policy_upload()
-
+    st.markdown("### Compare product examples")
     names = [item["name"] for item in policies]
     chosen = st.multiselect("Policies to compare", names, default=names[:2])
     selected = [item for item in policies if item["name"] in chosen]
     if selected:
+        chart_col, premium_col = st.columns(2)
+        with chart_col:
+            st.markdown("**Illustrative sum assured**")
+            st.bar_chart(pd.DataFrame({"₹ lakh": {item["name"]: item["sum_assured_lakh"] for item in selected}}), horizontal=True)
+        with premium_col:
+            st.markdown("**Illustrative annual premium**")
+            st.bar_chart(pd.DataFrame({"₹ / year": {item["name"]: item["premium"] for item in selected}}), horizontal=True)
+        st.caption("Charts compare bundled examples, not insurer quotes or current offers.")
         labels = [("Product", "product_type"), ("Insurer", "insurer"), ("Product UIN", "uin"),
                   ("Version / effective date", "version_date"), ("Official source URL", "source_url"),
                   ("Illustrative sum assured", "sum_assured"),
@@ -163,15 +192,28 @@ def _comparison(policies, branches, occupations, pin, market_reference, product_
                 else:
                     value = policy.get(key, "Not listed")
                 cell.write(value)
-        st.markdown("### Clause explanations")
-        policy_name = st.selectbox("View explanations from", [item["name"] for item in selected])
+        st.markdown("### Policy facts and explanations")
+        policy_name = st.selectbox("Policy example", [item["name"] for item in selected], key="comparison_clause_policy")
         policy = next(item for item in selected if item["name"] == policy_name)
         for clause in policy["clauses"]:
-            _render_clause(policy, clause)
+            with st.expander(f"{clause['category']} · Page {clause['page']}"):
+                fact_col, explanation_col = st.columns(2)
+                with fact_col:
+                    st.markdown("**Policy wording / extracted fact**")
+                    st.write(clause["text"])
+                    st.caption(f"{policy['source']} · {policy['version']} · Page {clause['page']}")
+                with explanation_col:
+                    st.markdown("**Plain-language explanation**")
+                    st.write(clause["explanation"])
+                    st.caption("Demonstration explanation, separate from policy wording.")
+    st.markdown("### Review an uploaded policy PDF")
+    _policy_upload()
 
-    st.divider()
-    st.markdown("### Find a closer match")
-    st.write("The ranking applies stated budget and age limits, then explains how plan features match the selected goal. It does not assess insurability or calculate an insurer quote.")
+
+def _recommendations(policies, branches, occupations, pin):
+    st.markdown('<div class="eyebrow">Personalized policy shortlist</div>', unsafe_allow_html=True)
+    st.title("Recommendations")
+    st.caption("Set constraints and priorities to see which bundled examples fit. This is not an eligibility or premium decision.")
     first, second, third = st.columns(3)
     with first:
         age = st.number_input("Applicant age", min_value=18, max_value=100, value=30, step=1, key="recommend_age")
@@ -193,18 +235,26 @@ def _comparison(policies, branches, occupations, pin, market_reference, product_
             "Chronic condition", "Recurring condition or treatment", "Ongoing medication", "Recent or planned investigation", "Prefer to discuss directly with insurer"
         ])
         st.caption("These details stay in this browser session and are not sent to an AI service or used to reject/rank a policy. Disclose relevant information accurately to the insurer.")
+    st.markdown("**Preference importance**")
+    weight_cols = st.columns(4)
     weights = {
-        "coverage_score": 5 if goal == "Larger life cover" else 2,
-        "price_score": 5 if goal == "Lower annual premium" else 2,
-        "benefit_score": 5 if goal in ("Periodic payouts", "Long-term savings and maturity value", "Protection duration") else 2,
+        "coverage_score": weight_cols[0].slider("Cover", 0, 5, 3, key="weight_cover"),
+        "price_score": weight_cols[1].slider("Price", 0, 5, 3, key="weight_price"),
+        "benefit_score": weight_cols[2].slider("Goal fit", 0, 5, 4, key="weight_goal"),
     }
     branch_matches, _ = find_locations(branches, pin)
     if branch_matches:
-        weights["local_support_score"] = 3
+        weights["local_support_score"] = weight_cols[3].slider("Local support", 0, 5, 2, key="weight_local")
+    else:
+        weight_cols[3].caption("Local support: no verified matches")
     # Health/occupation are retained only as non-scoring prompts for policy disclosure.
     ranked = rank_policies(policies, min_cover, max_budget, weights, age=age, goal=goal, location_records=branch_matches)
     if not ranked:
         st.warning("No available example meets both the age range and the stated budget/cover limits.")
+    elif len(ranked) > 1:
+        st.markdown("### Preference fit at a glance")
+        fit = pd.DataFrame({"Preference fit / 100": {policy["name"]: policy["preference_fit"] for policy in ranked}})
+        st.bar_chart(fit, horizontal=True)
     for position, policy in enumerate(ranked, start=1):
         with st.container(border=True):
             left, middle, right = st.columns([4, 1, 3])
@@ -213,10 +263,12 @@ def _comparison(policies, branches, occupations, pin, market_reference, product_
             middle.metric("Preference fit", f"{policy['preference_fit']}/100")
             active = [f"{key.replace('_score', '')} {value} × {weights[key]}" for key, value in policy["score_breakdown"].items()]
             right.caption("Weighted factors (score × weight) · " + " · ".join(active))
+            if policy["score_breakdown"]:
+                right.bar_chart(pd.DataFrame({"Factor score": policy["score_breakdown"]}), horizontal=True, height=170)
             right.caption(f"Premium-paying term: {policy['premium_term_years']} years · Policy term: {policy['policy_term_years']} years")
     if ranked:
         st.caption("Age is checked against the available entry-age fields. Health disclosures and occupation are not scored; review the insurer's underwriting and disclosure requirements directly.")
-    st.caption(f"Location input: {pin}. Verified adviser/branch matches are included only where sourced data is available.")
+    st.caption(f"Location input: {pin or 'not provided'}. Verified adviser/branch matches are included only where sourced data is available.")
     if health_context:
         st.info("Before applying, check the insurer's health questions and disclose relevant history fully. No policy eligibility conclusion is made here.")
     profile = get_profile(occupations, occupation)
@@ -254,53 +306,58 @@ def _claim_readiness(policies):
 
 def _location_and_occupation(branches, occupations, pin):
     st.markdown('<div class="eyebrow">Location and applicant context</div>', unsafe_allow_html=True)
-    st.title("Find local insurer support")
-    st.write("Use a PIN code or city to view verified insurer branches or advisers when an official source is available.")
-    if not branches:
-        st.info("No verified branch or adviser directory is currently loaded. Location-based matching will appear when sourced records are added.")
-    else:
-        search_from = st.radio("Search from", ["PIN or city", "Current device location"], horizontal=True)
-        coords = None
-        search_records = branches
-        if search_from == "Current device location":
-            location_state = _GEO_COMPONENT(
-                key="device_location",
-                default={"coordinates": None, "error": ""},
-                on_coordinates_change=lambda: None,
-                on_error_change=lambda: None,
-            )
-            if location_state.coordinates:
-                coords = (location_state.coordinates["lat"], location_state.coordinates["lon"])
-                st.caption("Location is used in this session only. The map does not load third-party basemap tiles.")
-            else:
-                st.caption("Share location in the browser prompt, or select PIN/city. Exact coordinates are not shown.")
+    st.title("Location and occupation")
+    st.caption("Use your device location to preview a nearby search radius. Sharing location is optional.")
+    search_from = st.radio("Map centre", ["Current device location", "PIN or city directory"], horizontal=True)
+    coords = None
+    search_records = branches
+    if search_from == "Current device location":
+        location_state = _GEO_COMPONENT(
+            key="device_location",
+            default={"coordinates": None, "error": ""},
+            on_coordinates_change=lambda: None,
+            on_error_change=lambda: None,
+        )
+        if location_state.coordinates:
+            coords = (location_state.coordinates["lat"], location_state.coordinates["lon"])
+            st.caption("Device location is used in this session only. Exact coordinates are not displayed. Map tiles are not loaded from a third party.")
         else:
-            local, _ = find_locations(branches, pin)
-            search_records = local
-            coords = location_centroid(branches, pin)
-            if pin:
-                st.caption("The PIN/city map centre is approximate and based on directory records.")
-        if coords:
-            radius_km = st.slider("Search radius (km)", 5, 50, 20, 5)
-            nearby = nearby_locations(search_records, coords[0], coords[1], radius_km)
-            if nearby:
-                radius = [{"lat": coords[0], "lon": coords[1], "radius_m": radius_km * 1000}]
-                st.pydeck_chart(pdk.Deck(
-                    layers=[
-                        pdk.Layer("ScatterplotLayer", data=radius, get_position="[lon, lat]", get_radius="radius_m", radius_units="meters",
-                                  stroked=True, filled=True, get_fill_color=[8, 127, 131, 28], get_line_color=[8, 127, 131, 180], line_width_min_pixels=2),
-                        pdk.Layer("ScatterplotLayer", data=nearby, get_position="[lon, lat]", get_radius=160,
-                                  get_fill_color=[236, 143, 48, 220], get_line_color=[255, 255, 255], line_width_min_pixels=1,
-                                  pickable=True),
-                    ],
-                    initial_view_state=pdk.ViewState(latitude=coords[0], longitude=coords[1], zoom=10, pitch=0),
-                    map_provider=None,
-                    tooltip={"text": "{name}\n{city} · {verified}\n{distance_km} km (straight-line estimate)"},
-                    height=420,
-                ))
-                for branch in nearby:
-                    st.markdown(f"**{branch['name']}** · {branch['city']} · {branch['distance_km']} km estimated")
-                    st.caption(f"Last verified: {branch['verified']} · Source: {branch['source']}")
+            st.caption("Select “Use my current location” to set the map centre, or choose PIN/city when verified directory data is available.")
+    else:
+        search_records, _ = find_locations(branches, pin)
+        coords = location_centroid(branches, pin)
+        if pin:
+            st.caption("PIN/city map centre is approximate and based on directory records.")
+    if coords:
+        radius_km = st.slider("Preview radius (km)", 5, 50, 20, 5)
+        nearby = nearby_locations(search_records, coords[0], coords[1], radius_km)
+        radius = [{"lat": coords[0], "lon": coords[1], "radius_m": radius_km * 1000}]
+        centre = [{"lat": coords[0], "lon": coords[1], "name": "Your selected location"}]
+        layers = [
+            pdk.Layer("ScatterplotLayer", data=radius, get_position="[lon, lat]", get_radius="radius_m", radius_units="meters",
+                      stroked=True, filled=True, get_fill_color=[8, 127, 131, 32], get_line_color=[8, 127, 131, 190], line_width_min_pixels=2),
+            pdk.Layer("ScatterplotLayer", data=centre, get_position="[lon, lat]", get_radius=230,
+                      get_fill_color=[8, 127, 131, 240], get_line_color=[255, 255, 255], line_width_min_pixels=2),
+        ]
+        if nearby:
+            layers.append(pdk.Layer("ScatterplotLayer", data=nearby, get_position="[lon, lat]", get_radius=150,
+                                    get_fill_color=[236, 143, 48, 230], get_line_color=[255, 255, 255], line_width_min_pixels=1, pickable=True))
+        st.pydeck_chart(pdk.Deck(
+            layers=layers,
+            initial_view_state=pdk.ViewState(latitude=coords[0], longitude=coords[1], zoom=10, pitch=0),
+            map_provider=None,
+            tooltip={"text": "{name}\n{city} · {verified}\n{distance_km} km (straight-line estimate)"},
+            height=420,
+        ))
+        if nearby:
+            st.markdown("### Sourced insurer branches or advisers")
+            for branch in nearby:
+                st.markdown(f"**{branch['name']}** · {branch['city']} · {branch['distance_km']} km estimated")
+                st.caption(f"Last verified: {branch['verified']} · Source: {branch['source']}")
+        else:
+            st.info("No verified insurer branch/adviser records are loaded. The circle shows only the selected search radius; it does not show policy or hospital coverage.")
+    if not branches:
+        st.caption("A source-linked directory with coordinates and last-verified dates is needed before local support results can be displayed.")
     st.markdown("### Occupation context")
     occupation = st.selectbox("Occupation", list(occupations), key="location_occupation")
     profile = get_profile(occupations, occupation)
@@ -318,7 +375,7 @@ def main():
         st.markdown('<p class="brand">Policy<span>Lens</span></p>', unsafe_allow_html=True)
         st.caption("Life insurance, made clearer")
         st.divider()
-        page = st.radio("Workspace", ["Overview", "Policy comparison", "Claim readiness", "Location & occupation"], label_visibility="collapsed", key="page_nav")
+        page = st.radio("Workspace", ["Overview", "Policy comparison", "Recommendations", "Claim readiness", "Location & occupation"], label_visibility="collapsed", key="page_nav")
         product_focus = st.selectbox("Life policy type", ["All life policies", "Term life", "Non-term life"], key="product_focus")
         st.divider()
         st.markdown("**Your profile**")
@@ -329,29 +386,27 @@ def main():
 
     visible_policies = policies if product_focus == "All life policies" else [item for item in policies if item["category"] == product_focus]
     if page == "Overview":
-        st.markdown('<div class="hero"><div class="eyebrow" style="color:#7ee2d1">Life policy clarity, in context</div><h1>See what a policy promises<br>and what to verify.</h1><p>Compare term and non-term life products, understand key conditions and prepare better questions for an insurer.</p></div>', unsafe_allow_html=True)
-        cols = st.columns(3)
-        for col, title, value, detail in zip(cols, ["Life products", "Policy clauses", "Work profiles"],
-                                             [len(visible_policies), sum(len(item["clauses"]) for item in visible_policies), len(occupations)],
-                                             ["illustrative examples", "with page references", "descriptive context"]):
-            col.metric(title, value, detail)
-        st.markdown("### Start with a question")
+        st.markdown('<div class="hero"><div class="eyebrow" style="color:#7ee2d1">Life insurance decision support</div><h1>Understand. Compare. Prepare.</h1><p>Review policy wording, see how examples differ, and prepare questions for an insurer.</p></div>', unsafe_allow_html=True)
+        st.markdown("### Choose a workspace")
         a, b, c = st.columns(3)
-        for col, eyebrow, title, body in [
-            (a, "01 · Understand", "What does this term mean?", "Review a plain-language explanation with a page reference."),
-            (b, "02 · Compare", "Which plan matches my priorities?", "Compare benefit structure, term and premium examples."),
-            (c, "03 · Prepare", "What should I verify?", "Review common documents for a policy request.")]:
+        for col, title, body in [
+            (a, "Policy comparison", "Compare terms, benefits and source wording."),
+            (b, "Recommendations", "Set your constraints and rank examples by priority."),
+            (c, "Claim readiness", "Review common documents for a policy request.")]:
             with col:
-                st.markdown(f'<div class="panel"><span class="eyebrow">{eyebrow}</span><h3>{title}</h3><p class="subtle">{body}</p></div>', unsafe_allow_html=True)
-        st.markdown("### Evidence and context")
-        st.info("Policy facts and explanations are kept distinct. Open the source wording when you need to check context.")
-        st.markdown("### Published market reference")
-        st.write(f"The comparison includes sourced listings for {market_reference['market_facts']['term_products_listed']} term products and {market_reference['market_facts']['investment_plans_listed']} investment plans from Policybazaar.")
-        st.caption("These reference listings do not include full policy wordings or comparable premiums. Clause examples remain illustrative. Confirm current details with each insurer.")
+                st.markdown(f'<div class="panel"><h3>{title}</h3><p class="subtle">{body}</p></div>', unsafe_allow_html=True)
+        st.markdown("### Reference snapshot")
+        counts = market_reference["market_facts"]
+        st.bar_chart(pd.DataFrame({"Listings": {"Term products": counts["term_products_listed"], "Investment plans": counts["investment_plans_listed"]}}), horizontal=True)
+        st.caption(f"Policybazaar reference: {counts['term_products_listed']} term listings and {counts['investment_plans_listed']} investment-plan listings. These are market listings, not comparable policy quotes.")
+        st.caption("Bundled policy and clause examples are illustrative. Uploaded wording is shown separately from its review summary.")
     elif page == "Policy comparison":
-        _comparison(visible_policies, branches, occupations, pin, market_reference, product_focus)
+        _comparison(visible_policies, market_reference, product_focus)
+    elif page == "Recommendations":
+        _recommendations(visible_policies, branches, occupations, pin)
     elif page == "Claim readiness":
         _claim_readiness(visible_policies)
     else:
         _location_and_occupation(branches, occupations, pin)
     st.markdown("<br><hr><span class='subtle'>PolicyLens · Clear evidence. Better questions. More informed choices.</span>", unsafe_allow_html=True)
+
