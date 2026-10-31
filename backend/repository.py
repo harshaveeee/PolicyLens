@@ -25,3 +25,4 @@ def get_occupations():
 
 def get_market_reference():
     return _read_json("market_reference.json")
+
