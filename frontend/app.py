@@ -55,6 +55,14 @@ def _styles():
     .hero h1 {font-size:2.2rem;letter-spacing:-.04em;color:#fff;margin:.3rem 0 .45rem;}
     .hero p {color:#cce1e5;margin:0;max-width:780px;}
     .panel {background:#fff;border:1px solid var(--line);border-radius:15px;padding:1rem 1.1rem;box-shadow:0 3px 12px #102b3a08;}
+    .rec-hero {padding:1.25rem 1.5rem;border-radius:18px;background:linear-gradient(110deg,#102d3b 0%,#174c57 72%,#187c7a 100%);color:#fff;margin:.25rem 0 1.2rem;}
+    .rec-hero strong {display:block;font-size:1.2rem;color:#fff;margin-bottom:.25rem;}
+    .rec-hero span {color:#d3e6e8;font-size:.93rem;}
+    .priority-title {font-weight:750;color:#142b3b;font-size:1rem;margin-bottom:.35rem;}
+    .priority-copy {color:#678091;font-size:.84rem;line-height:1.45;min-height:3.7rem;}
+    .score-method {border:1px solid #cfe5e2;border-left:4px solid #087f83;background:#f0f8f7;padding:.9rem 1rem;border-radius:10px;color:#244253;margin:.5rem 0 1rem;}
+    .score-method strong {color:#102d3b;}
+    .result-kicker {color:#087f83;font-weight:700;text-transform:uppercase;letter-spacing:.09em;font-size:.7rem;}
     .source {border-left:3px solid #56b8ad;background:#f2faf8;padding:.7rem .85rem;border-radius:0 9px 9px 0;color:#244253;font-size:.9rem;}
     .subtle {color:#6e8492;font-size:.82rem;}
     div[data-testid="stMetric"] {background:#fff;border:1px solid var(--line);padding:.9rem 1rem;border-radius:14px;}
@@ -213,20 +221,24 @@ def _comparison(policies, market_reference, product_focus):
 def _recommendations(policies, branches, occupations, pin):
     st.markdown('<div class="eyebrow">Personalized policy shortlist</div>', unsafe_allow_html=True)
     st.title("Recommendations")
-    st.caption("Set the limits a policy must meet, then tell us which features matter most. Results use demonstration records only.")
+    st.markdown('<div class="rec-hero"><strong>Set your limits. Choose your priorities.</strong><span>We first remove examples that miss your age, cover or budget limits. Then we score the remaining examples against the priorities you set.</span></div>', unsafe_allow_html=True)
+    st.caption("This screen uses illustrative records. It does not calculate an insurer quote, assess insurability, or make a financial recommendation.")
     with st.container(border=True):
         st.markdown("#### 1 · Your must-haves")
-        st.caption("These are hard filters: an example outside any limit is removed before ranking.")
+        st.caption("These are pass/fail filters. An example outside any one of these limits is removed before scores are calculated.")
         first, second, third = st.columns(3)
         with first:
             age = st.number_input("Your age", min_value=18, max_value=100, value=30, step=1, key="recommend_age",
-                                  help="Used only against the entry-age range listed in each example. It does not assess insurability.")
+                                  help="Enter your age in completed years. Used only to check the entry-age range listed in each example.")
+            st.caption("Age in completed years; checked against listed entry-age limits only.")
         with second:
             min_cover = st.number_input("Minimum cover (₹ lakh)", min_value=1.0, max_value=100.0, value=5.0, step=1.0,
-                                        help="The minimum illustrative sum assured to keep. For example, 50 means ₹50 lakh.")
+                                        help="This is the minimum illustrative sum assured to keep. ₹1 lakh = ₹100,000.")
+            st.caption(f"Minimum illustrative sum assured: ₹{min_cover:g} lakh.")
         with third:
             max_budget = st.number_input("Annual budget (₹ maximum)", min_value=1000, max_value=1000000, value=50000, step=1000,
                                          help="Examples above this annual premium are filtered out. This is not an insurer quote.")
+            st.caption(f"Examples above ₹{max_budget:,.0f} per year are removed.")
     goals = ["Larger life cover", "Lower annual premium"]
     if any(item["category"] == "Non-term life" for item in policies):
         goals.extend(["Long-term savings and maturity value", "Periodic payouts"])
@@ -234,13 +246,21 @@ def _recommendations(policies, branches, occupations, pin):
         goals.append("Protection duration")
     with st.container(border=True):
         st.markdown("#### 2 · Your preferences and context")
-        st.caption("Preferences change the order of policies that pass your must-haves; they do not guarantee suitability.")
+        st.caption("These details explain your priorities. Only the selected goal affects the goal-fit factor; occupation and health remain context only.")
         left, right = st.columns(2)
         with left:
-            goal = st.selectbox("Main goal", goals, help="Adds a feature-fit score based on product type and the goal you select. It does not change the insurer's terms.")
+            goal = st.selectbox("What matters most?", goals, help="The choice sets the goal-fit factor described below. It does not change policy terms.")
+            goal_descriptions = {
+                "Larger life cover": "Goal-fit stays neutral for all examples; the Life cover factor below handles this priority.",
+                "Lower annual premium": "Goal-fit stays neutral for all examples; the Lower price factor below handles this priority.",
+                "Long-term savings and maturity value": "Goal-fit points: endowment 100, whole-life 65, money-back 40, term 0.",
+                "Periodic payouts": "Goal-fit points: money-back 100; other example types 35.",
+                "Protection duration": "Goal-fit points: term 100; non-term 35.",
+            }
+            st.caption(goal_descriptions[goal])
             occupation = st.selectbox("Occupation", list(occupations), key="recommend_occupation",
                                      help="Provides descriptive workplace context only. It is not used to rank, price, or determine eligibility.")
-            st.caption(f"PIN/city: {pin or 'not set'} · used only to match verified local support records.")
+            st.caption(f"Occupation adds descriptive exposure context only. PIN/city: {pin or 'not set'}.")
         with right:
             use_health_context = st.checkbox("Add health disclosures as private review context", help="Optional. These details are not ranking inputs and are not sent to the AI summary service.")
             health_context = []
@@ -248,29 +268,57 @@ def _recommendations(policies, branches, occupations, pin):
                 health_context = st.multiselect("Ongoing or recurring health disclosures", [
                     "Chronic condition", "Recurring condition or treatment", "Ongoing medication", "Recent or planned investigation", "Prefer to discuss directly with insurer"
                 ])
-                st.caption("Used only for this on-screen reminder during the active app session; not sent to AI or used to reject or rank a policy. Share relevant details directly with the insurer.")
+                st.caption("Shown only as an on-screen reminder for this active session. Not sent to AI and not used to rank or filter examples. Share relevant details with the insurer.")
     with st.container(border=True):
-        st.markdown("#### 3 · What matters most?")
-        st.caption("Set each slider from 0 to 5. Zero ignores that factor; five gives it the strongest relative influence. Equal values mean equal importance.")
-        weight_cols = st.columns(4)
+        st.markdown("#### 3 · Set factor importance")
+        st.caption("The sliders are weights, not policy scores. All slider weights are applied to 0–100 factor scores to calculate the final preference fit.")
+        weight_cols = st.columns(3)
         weights = {
-            "coverage_score": weight_cols[0].slider("Life cover", 0, 5, 3, key="weight_cover", help="How strongly should the ranking favor a larger sum assured?"),
-            "price_score": weight_cols[1].slider("Lower price", 0, 5, 3, key="weight_price", help="How strongly should the ranking favor a lower example premium?"),
-            "benefit_score": weight_cols[2].slider("Goal match", 0, 5, 4, key="weight_goal", help="How strongly should the selected goal influence the ranking?"),
+            "coverage_score": 0,
+            "price_score": 0,
+            "benefit_score": 0,
         }
+        slider_specs = [
+            ("coverage_score", 0, "Cover score", "Score = this example’s sum assured ÷ the largest sum assured among examples that passed your filters × 100."),
+            ("price_score", 1, "Price score", "Cheapest passing example = 100; most expensive = 0; values between are scaled evenly. If prices are equal, all score 100."),
+            ("benefit_score", 2, "Goal-fit score", goal_descriptions[goal]),
+        ]
+        weight_names = {0: "Ignored", 1: "Very low", 2: "Low", 3: "Medium", 4: "High", 5: "Highest"}
+        for key, column_index, title, description in slider_specs:
+            with weight_cols[column_index].container(border=True):
+                st.markdown(f'<div class="priority-title">{title}</div><div class="priority-copy">{description}</div>', unsafe_allow_html=True)
+                short_label = {"coverage_score": "Life cover", "price_score": "Lower price", "benefit_score": "Goal match"}[key]
+                st.caption("Importance: 0 ignores this factor · 5 gives it the strongest influence.")
+                weights[key] = st.slider(short_label, 0, 5, {"coverage_score": 3, "price_score": 3, "benefit_score": 4}[key], key={"coverage_score": "weight_cover", "price_score": "weight_price", "benefit_score": "weight_goal"}[key], label_visibility="collapsed")
+                st.caption(f"{weights[key]} / 5 · {weight_names[weights[key]]} importance")
         branch_matches, _ = find_locations(branches, pin)
         if branch_matches:
-            weights["local_support_score"] = weight_cols[3].slider("Local support", 0, 5, 2, key="weight_local", help="Favors an available matching branch or adviser record.")
+            with st.container(border=True):
+                st.markdown("**Local-support score**")
+                st.caption("100 for a matching verified branch/adviser record; 0 when none matches. This factor is available only when a sourced directory match exists.")
+                weights["local_support_score"] = st.slider("Local support importance", 0, 5, 2, key="weight_local", help="The weight for a matching sourced local-support record.")
+                st.caption(f"{weights['local_support_score']} / 5 · {weight_names[weights['local_support_score']]} importance")
         else:
-            weight_cols[3].caption("Local support")
-            weight_cols[3].markdown("No verified matches")
+            st.info("Local support is not included in this ranking: there is no verified branch/adviser match for the selected PIN/city.")
+        total_weight = sum(weights.values())
+        factor_names = [("coverage_score", "cover score"), ("price_score", "price score"), ("benefit_score", "goal-fit score")]
+        if "local_support_score" in weights:
+            factor_names.append(("local_support_score", "local-support score"))
+        formula = " + ".join(f"{name} × {weights[key]}" for key, name in factor_names)
+        formula_text = (f"Preference fit = ({formula}) ÷ {total_weight} total weight." if total_weight
+                        else "All slider weights are 0, so preference fit is 0.")
+        st.markdown(
+            f'<div class="score-method"><strong>How the final number is made:</strong> {formula_text}<br>'
+            f'<span>Each factor score is 0–100. The slider number is its importance weight (0–5). The final fit is also 0–100.</span></div>',
+            unsafe_allow_html=True,
+        )
     # Health/occupation are retained only as non-scoring prompts for policy disclosure.
     ranked = rank_policies(policies, min_cover, max_budget, weights, age=age, goal=goal, location_records=branch_matches)
     if not ranked:
         st.warning("No example passed all three limits. Try adjusting age, minimum cover, or annual budget.")
     else:
         st.markdown("### Your ranked examples")
-        st.caption("Preference fit is a relative score among the examples that passed your filters—not a probability, quality rating, or approval estimate.")
+        st.caption("The bars compare only the examples that passed your must-haves. Fit is not a probability, policy-quality rating, or insurer approval estimate.")
         fit = pd.DataFrame({"Preference fit / 100": {policy["name"]: policy["preference_fit"] for policy in ranked}})
         st.bar_chart(fit, horizontal=True, height=min(320, 90 + 42 * len(ranked)))
         best = ranked[0]
@@ -284,8 +332,9 @@ def _recommendations(policies, branches, occupations, pin):
             middle.progress(best["preference_fit"])
             factor_labels = {"coverage_score": "Life cover", "price_score": "Lower price", "benefit_score": "Goal match", "local_support_score": "Local support"}
             contributions = {factor_labels.get(key, key): value * weights[key] for key, value in best["score_breakdown"].items()}
-            right.markdown("**Weighted factors**")
-            right.bar_chart(pd.DataFrame({"Score × importance": contributions}), horizontal=True, height=210)
+            right.markdown("**Weighted factor points**")
+            right.caption("Each bar = factor score × slider weight. The total fit divides their sum by the total weight.")
+            right.bar_chart(pd.DataFrame({"Weighted points": contributions}), horizontal=True, height=210)
         if len(ranked) > 1:
             with st.expander("See other matching examples"):
                 for position, policy in enumerate(ranked[1:], start=2):
